@@ -1,0 +1,17 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0.0", "wheel"]
+
+[project]
+name = "module10"
+authors = [{name = "Sergio Recio", email = "sergio.recio.rodriguez@ons.gov.uk"}]
+description = "Causal inference"
+readme = "README.md"
+requires-python = ">=3.9"
+version = "0.0.1"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.urls]
+Repository = "https://github.com/datasciencecampus/probable-octo-enigma"

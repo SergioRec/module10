@@ -4,10 +4,18 @@
 
 # Introduction
 ## About
-*Describe what this repo contains and what the project is.*
+This project will do synthetic control on CPI data.
 
 ## Installation
-*Describe technical set-up. Such as the required dependencies.*
+
+1. Setup a new conda env: `conda create -n module10 python=3.9.13`
+2. Activate the environment: `conda activate module10`
+3. Launch terminal and change directory to wherever you keep your GitHub repos: `cd ~/Documents`
+4. Clone this repo, eg with https: `git clone https://github.com/SergioRec/module10.git`
+5. Change directory to the repo: `cd module10`
+7. Update pip: `pip install --upgrade pip`
+8. Install r5py & other reqs: `pip install -r requirements.txt`
+9. Enable pre-commit hooks: `pre-commit install`
 
 ### Pre-commit actions
 This repository contains a configuration of pre-commit hooks. These are language agnostic and focussed on repository security (such as detection of passwords and API keys). If approaching this project as a developer, you are encouraged to install and enable `pre-commits` by running the following in your shell:
