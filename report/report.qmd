@@ -1,6 +1,24 @@
-"""Notebook for data pre-processing."""
+---
+title: "Effect of the Ukraine invasion on the prices of gas"
+format:
+    html:
+        embed-resources: true
+        echo: false
+---
 
-# %%
+### Introduction
+
+In this project we're going to test the hypothesis that the Russian invasion
+of Ukraine, started end of February 2022, had a significant impact in energy
+prices. This increase in energy prices would have a knock-on effect on
+industries considered high energy intensive, but less so in industries with
+less dependency on energy prices.
+
+To assess this hipothesis, we are going to use a technique called synthetic
+control, first developed by [Abadie et al.](https://www.jstor.org/stable/29747059)
+in 2010.
+
+```{python}
 # imports
 import os
 import warnings
@@ -13,7 +31,11 @@ from pyprojroot import here
 
 # ignore future warnings
 warnings.simplefilter(action="ignore", category=FutureWarning)
-# %%
+```
+
+
+
+```{python}
 # load data files
 
 ## CPI tables: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceinflation  # noqa
@@ -36,8 +58,6 @@ ei = pd.read_excel(
     os.path.join(here(), "data", "external", "cddataset.xlsx"), skiprows=2
 )
 
-# %%
-# process horrible excel format
 ei[["coicop_code", "item_name"]] = ei["COICOP Class level item"].str.split(
     " : ", expand=True
 )
@@ -49,21 +69,28 @@ ei = ei.rename(
     }
 )
 
-# %%
 cpi = cpi.rename(columns={"Unnamed: 0": "date"}).drop(
     columns="aggregate number"
 )
 cpi_melted = cpi.melt(id_vars="date", var_name="coicop_code", value_name="cpi")
 cpi_melted["coicop_code"] = cpi_melted["coicop_code"].astype("str")
 
-# %%
 # merged data
 data = cpi_melted.merge(ei, on="coicop_code", how="inner").copy()
 
-# %%
-# plot coicop categories from 2015 onwards to see trends
+data.head(10)
+```
+
+@fig-1 shows clearly that energy prices increased drastically after the
+invasion started. This increase overshadows any change in trends in any of the
+other categories.
+```{python}
+#| label: fig-1
+#| fig-cap: "A plot showing trend in CPI by energy intensity group"
 ons_cat = ["#12436D", "#28A197", "#801650", "#F46A25", "#3D3D3D", "#A285D1"]
 sns.set_palette(sns.color_palette(ons_cat))
+
+# plot coicop categories from 2015 onwards to see trends
 
 data_plot = data[(data["date"] >= 201501)].copy()
 
@@ -74,7 +101,12 @@ rank_treatment = data_plot[data_plot["date"] == 202202]["rank"].unique()[0]
 
 fig, ax = plt.subplots()
 sns.lineplot(
-    data=data_plot, x="rank", y="cpi", hue="energy_intensity_group", ax=ax
+    data=data_plot,
+    x="rank",
+    y="cpi",
+    hue="energy_intensity_group",
+    ci=False,
+    ax=ax
 )
 plt.vlines(
     x=rank_treatment,
@@ -83,7 +115,18 @@ plt.vlines(
     linestyles=":",
     colors="black",
 )
+ax.grid(axis="y", color="lightgrey", linewidth=1)
+sns.despine(top=True, right=True, left=True, bottom=True)
 plt.show()
+```
+
+@fig-2 shows the same information as above, but without the energy category
+to better appreciate the trends. It seems that industry groups with high and
+very high energy intensity grow faster after the war started. However, it is
+difficult to be sure because trends were not parallel before.
+```{python}
+#| label: fig-2
+#| fig-cap: "Trend in CPI by energy intensity group, excluding energy"
 
 # same but without energy
 fig, ax = plt.subplots()
@@ -102,42 +145,7 @@ plt.vlines(
     linestyles=":",
     colors="black",
 )
-plt.savefig(os.path.join(here(), "outputs", "descriptive1.png"))
+ax.grid(axis="y", color="lightgrey", linewidth=1)
+sns.despine(top=True, right=True, left=True, bottom=True)
 plt.show()
-
-# %%
-# by energy intensity category
-# reduce time granularity as some categories don't update every month
-data_plot = data[
-    (data["date"] >= 201001)
-    & (data["date"].astype("str").str[-2:].isin(["02", "08"]))
-].copy()
-
-# convert date string to integer from 1 to max
-# needed as intervals between date strings might not be the same
-data_plot["rank"] = data_plot["date"].rank(method="dense")
-rank_treatment = data_plot[data_plot["date"] == 202202]["rank"].unique()[0]
-
-fig, axs = plt.subplots(2, 3, sharey=True, sharex=True, figsize=(12, 8))
-ei_group = list(data_plot["energy_intensity_group"].unique())
-
-for ei, ax in zip(ei_group, axs.ravel()):
-    sel = data_plot[data_plot["energy_intensity_group"] == ei]
-    sns.lineplot(sel, x="rank", y="cpi", ax=ax)
-    ax.set_title(ei)
-    for tick in ax.get_xticklabels():
-        tick.set_rotation(45)
-    ax.vlines(
-        x=rank_treatment, ymin=250, ymax=50, linestyles=":", colors="black"
-    )
-plt.tight_layout()
-plt.savefig(os.path.join(here(), "outputs", "descriptive2.png"))
-plt.show()
-
-# %%
-# export processed data for analysis
-data.to_csv(
-    os.path.join(here(), "data", "processed", "processed_data.csv"),
-    index=False,
-)
-# %%
+```

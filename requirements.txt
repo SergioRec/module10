@@ -7,4 +7,7 @@ scikit-learn
 pre-commit
 openpyxl
 pyprojroot
+ipykernel
+jupyter
+plotly
 -e .

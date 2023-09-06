@@ -293,7 +293,9 @@ class SynthControlCV:
 
         """
         fig, ax = plt.subplots(figsize=(12, 7))
-        plt.plot(self.df_synth["year"].unique(), self.df_synth["dif"].values)
+        plt.plot(
+            self.df_synth[self.time].unique(), self.df_synth["dif"].values
+        )
 
         plt.vlines(
             self.treatment_date,
@@ -367,7 +369,7 @@ class Placebo(SynthControlCV):
     def placebo_test(self):
         """TODO: docstring."""
         for unit in self.df[self.id].unique():
-            # print(unit)
+            print(unit)
             self.unit = unit
             self.prepare_data()
             self.reg()
@@ -386,9 +388,9 @@ class Placebo(SynthControlCV):
         att_treated = self.dict_att[self.treated]
 
         if effect_dir == "pos":
-            self._p = np.round(np.mean(att_vals > att_treated), 3)
+            self._p = np.round(np.mean(att_vals >= att_treated), 3)
         elif effect_dir == "neg":
-            self._p = np.round(np.mean(att_vals < att_treated), 3)
+            self._p = np.round(np.mean(att_vals <= att_treated), 3)
 
     def plot_placebo_test(
         self,
@@ -441,7 +443,7 @@ class Placebo(SynthControlCV):
             ax=ax,
             legend=False,
         )
-        plt.xticks(range(2003, 2021, 2))
+
         plt.vlines(
             self.treatment_date,
             ymin=ax.get_ylim()[0],
