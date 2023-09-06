@@ -6,4 +6,5 @@ numpy
 scikit-learn
 pre-commit
 openpyxl
+pyprojroot
 -e .
