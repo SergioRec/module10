@@ -34,18 +34,11 @@ Once pre-commits are activated, whenever you commit to this repository a series 
 **NOTE:** Pre-commit hooks execute Python, so it expects a working Python build.
 
 ## Usage
-*Explain how to use the things in the repo.*
+Raw data needs to be downloaded into `data/external`, and processed data will be stored in `data/processed`. Charts will be saved in `outputs`.
 
-### Workflow
-*You may wish to consider generating a graph to show your project workflow. GitHub markdown provides native support for [mermaid](https://mermaid.js.org/syntax/flowchart.html), an example of which is provided below:*
+The `report` folder contains a Quarto report. Installation instructions can be found [here](https://quarto.org/docs/get-started/).
 
-```mermaid
-flowchart TD
-   id1[(Some data)] --> id2(Some processing)
-   id3[(More data)] --> id2
-   id2 --> id4[Some output]
-```
-
+To run synthetic control, notebooks use a custom-made module in `src/module10`.
 
 # Data Science Campus
 At the [Data Science Campus](https://datasciencecampus.ons.gov.uk/about-us/) we apply data science, and build skills, for public good across the UK and internationally. Get in touch with the Campus at [datasciencecampus@ons.gov.uk](datasciencecampus@ons.gov.uk).
