@@ -254,7 +254,7 @@ class SynthControlCV:
         None
 
         """
-        fig, ax = plt.subplots(figsize=(12, 7))
+        fig, ax = plt.subplots(figsize=(9, 5))
         plt.plot(
             self.df_synth[self.time].unique(),
             self.df_synth[self.outcome].values,
@@ -273,6 +273,7 @@ class SynthControlCV:
             colors="black",
             label="Treatment",
         )
+        ax.grid(axis="y", color="lightgrey", linewidth=1)
         plt.ylabel(self.outcome)
         plt.xlabel("Time")
         plt.title(self.unit)
@@ -280,7 +281,8 @@ class SynthControlCV:
         sns.despine()
         if save is True:
             plt.savefig(os.path.join(savepath, filename))
-        plt.show()
+        return ax
+        # plt.show()
 
     def plot_dif(
         self, save: bool = False, savepath: str = None, filename: str = None
@@ -292,7 +294,7 @@ class SynthControlCV:
         None
 
         """
-        fig, ax = plt.subplots(figsize=(12, 7))
+        fig, ax = plt.subplots(figsize=(9, 5))
         plt.plot(
             self.df_synth[self.time].unique(), self.df_synth["dif"].values
         )
@@ -308,6 +310,7 @@ class SynthControlCV:
         plt.hlines(
             0, xmin=ax.get_xlim()[0], xmax=ax.get_xlim()[1], colors="black"
         )
+        ax.grid(axis="y", color="lightgrey", linewidth=1)
         plt.ylabel("Treated - synthetic control")
         plt.xlabel("Time")
         plt.title(self.unit + "\nATT = " + str(self.att))
@@ -315,7 +318,8 @@ class SynthControlCV:
         sns.despine()
         if save is True:
             plt.savefig(os.path.join(savepath, filename))
-        plt.show()
+        return ax
+        # plt.show()
 
 
 class Placebo(SynthControlCV):
@@ -369,7 +373,7 @@ class Placebo(SynthControlCV):
     def placebo_test(self):
         """TODO: docstring."""
         for unit in self.df[self.id].unique():
-            print(unit)
+            # print(unit)
             self.unit = unit
             self.prepare_data()
             self.reg()
@@ -421,7 +425,7 @@ class Placebo(SynthControlCV):
 
         p_color = ["grey" for u in placebos_p[self.id].unique()]
 
-        fig, ax = plt.subplots(figsize=(12, 7))
+        fig, ax = plt.subplots(figsize=(9, 5))
         sns.lineplot(
             data=placebos_p,
             x=self.time,
@@ -462,7 +466,9 @@ class Placebo(SynthControlCV):
             + "\npool size = "
             + str(self._pool_size)
         )
+        ax.grid(axis="y", color="lightgrey", linewidth=1)
         sns.despine()
         if save is True:
             plt.savefig(os.path.join(savepath, filename))
-        plt.show()
+        return ax
+        # plt.show()

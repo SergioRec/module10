@@ -83,6 +83,8 @@ plt.vlines(
     linestyles=":",
     colors="black",
 )
+ax.set_xticks(list(data_plot["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_plot["date"].unique())[1::16]])
 plt.show()
 
 # same but without energy
@@ -102,6 +104,8 @@ plt.vlines(
     linestyles=":",
     colors="black",
 )
+ax.set_xticks(list(data_plot["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_plot["date"].unique())[1::16]])
 plt.savefig(os.path.join(here(), "outputs", "descriptive1.png"))
 plt.show()
 

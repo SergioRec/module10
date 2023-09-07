@@ -10,13 +10,16 @@ format:
 
 In this project we're going to test the hypothesis that the Russian invasion
 of Ukraine, started end of February 2022, had a significant impact in energy
-prices. This increase in energy prices would have a knock-on effect on
-industries considered high energy intensive, but less so in industries with
-less dependency on energy prices.
+prices. This increase in energy prices would be driven by disruptions to
+the imports of Russian gas and oil due to sanctions and other factors. Energy
+prices had a knock-on effect on industries considered high energy intensive,
+but less so in industries with less dependency on energy prices.
 
 To assess this hipothesis, we are going to use a technique called synthetic
 control, first developed by [Abadie et al.](https://www.jstor.org/stable/29747059)
-in 2010.
+in 2010. It consists on creating a synthetic control group to use as comparison,
+based on a weighted average of a number of placebo units. The weights are
+estimated using regression.
 
 ```{python}
 # imports
@@ -29,11 +32,15 @@ import seaborn as sns
 
 from pyprojroot import here
 
+from module10.synth_en import Placebo, SynthControlCV
+
 # ignore future warnings
 warnings.simplefilter(action="ignore", category=FutureWarning)
 ```
 
-
+We analysed [CPI time series](https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceinflation)
+together with the [energy intensity estimate](https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/contributionstotheconsumerpricesindexcpibyenergyintensity)
+for each industry category.
 
 ```{python}
 # load data files
@@ -86,7 +93,7 @@ invasion started. This increase overshadows any change in trends in any of the
 other categories.
 ```{python}
 #| label: fig-1
-#| fig-cap: "A plot showing trend in CPI by energy intensity group"
+#| fig-cap: "Trend in CPI by energy intensity group"
 ons_cat = ["#12436D", "#28A197", "#801650", "#F46A25", "#3D3D3D", "#A285D1"]
 sns.set_palette(sns.color_palette(ons_cat))
 
@@ -115,6 +122,8 @@ plt.vlines(
     linestyles=":",
     colors="black",
 )
+ax.set_xticks(list(data_plot["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_plot["date"].unique())[1::16]])
 ax.grid(axis="y", color="lightgrey", linewidth=1)
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.show()
@@ -145,7 +154,114 @@ plt.vlines(
     linestyles=":",
     colors="black",
 )
+ax.set_xticks(list(data_plot["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_plot["date"].unique())[1::16]])
 ax.grid(axis="y", color="lightgrey", linewidth=1)
 sns.despine(top=True, right=True, left=True, bottom=True)
+plt.show()
+```
+
+However, simple visual inspection is not enough to establish a causal relationship
+between the invasion and the increase in prices. We calculated a synthetic
+control using the industries classified as low and very low energy intensity,
+as these would have been less affected by an increase in energy prices.
+
+```{python}
+# filter data as we don't need long time series
+data_filt = data[data["date"] >= 201001].copy()
+
+# reduce granularity of data to prevent overfitting
+# data_filt = data_filt[data["date"].astype("str").str[-2:].isin(["02", "08"])]
+
+# rank dates to prevent uneven intervals due to date string
+data_filt["rank"] = data_filt["date"].rank(method="dense")
+rank_treatment = data_filt[data_filt["date"] == 202202]["rank"].unique()[0]
+
+# keep only low and very low energy dependency units as controls
+# keep gas as treated unit
+data_gas = data_filt[
+    (data_filt["energy_intensity_group"].isin(["Low", "Very low"]))
+    | (data_filt["coicop_code"] == "04.5.2")
+]
+
+# params
+treated_unit = "GAS "
+outcome = "cpi"
+time = "rank"
+df_id = "item_name"
+treatment_date = rank_treatment
+features = []
+
+synth = (
+    SynthControlCV(
+        data_gas,
+        unit=treated_unit,
+        outcome=outcome,
+        time=time,
+        df_id=df_id,
+        scale=True,
+        treatment_date=treatment_date,
+        features=features,
+    )
+    .prepare_data()
+    .reg()
+)
+
+synth_df = synth.create_synth()
+```
+
+@fig-3 shows the performance of the synthetic control and the gas CPI. A
+sudden increase in the CPI in gas prices is observed after the invasion, which
+is not visible in the synthetic control.
+```{python}
+#| label: fig-3
+#| fig-cap: "Gas CPI vs synthetic control"
+ax = synth.plot_synth()
+ax.set_xticks(list(data_gas["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
+plt.show()
+```
+
+@fig-4 shows the difference between synthetic control and target unit. The
+average treatment effect on the treated (ATT) is around 100, which suggest prices
+increased double of what was expected.
+```{python}
+#| label: fig-4
+#| fig-cap: "Difference between synthetic control and target unit"
+ax = synth.plot_dif()
+ax.set_xticks(list(data_gas["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
+plt.show()
+```
+
+To estimate if this effect is significant, a synthetic control is calculated
+for each placebo unit. If the ATT on the treated unit is more extreme than the
+placebo effects, we can consider it significant. @fig-5 shows that the effect
+is significant, as it's more extreme than >95% of the placebo effects.
+```{python}
+#| label: fig-5
+#| fig-cap: "Placebo tests"
+# placebo tests
+placebo = Placebo(
+    data_gas,
+    treated_unit=treated_unit,
+    outcome=outcome,
+    time=time,
+    df_id=df_id,
+    scale=True,
+    treatment_date=treatment_date,
+    features=features,
+)
+placebos = placebo.placebo_test()
+
+# %%
+ax = placebo.plot_placebo_test(
+    filter_bad=True,
+    save=True,
+    savepath=os.path.join(here(), "outputs"),
+    filename="placebos.png",
+)
+ax.set_xticks(list(data_gas["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
 plt.show()
 ```
