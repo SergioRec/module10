@@ -74,7 +74,12 @@ rank_treatment = data_plot[data_plot["date"] == 202202]["rank"].unique()[0]
 
 fig, ax = plt.subplots()
 sns.lineplot(
-    data=data_plot, x="rank", y="cpi", hue="energy_intensity_group", ax=ax
+    data=data_plot,
+    x="rank",
+    y="cpi",
+    hue="energy_intensity_group",
+    ci=False,
+    ax=ax,
 )
 plt.vlines(
     x=rank_treatment,
@@ -85,6 +90,7 @@ plt.vlines(
 )
 ax.set_xticks(list(data_plot["rank"].unique())[1::16])
 ax.set_xticklabels([str(d) for d in list(data_plot["date"].unique())[1::16]])
+plt.savefig(os.path.join(here(), "outputs", "descriptive1.png"))
 plt.show()
 
 # same but without energy
@@ -106,7 +112,7 @@ plt.vlines(
 )
 ax.set_xticks(list(data_plot["rank"].unique())[1::16])
 ax.set_xticklabels([str(d) for d in list(data_plot["date"].unique())[1::16]])
-plt.savefig(os.path.join(here(), "outputs", "descriptive1.png"))
+plt.savefig(os.path.join(here(), "outputs", "descriptive2.png"))
 plt.show()
 
 # %%
@@ -135,7 +141,7 @@ for ei, ax in zip(ei_group, axs.ravel()):
         x=rank_treatment, ymin=250, ymax=50, linestyles=":", colors="black"
     )
 plt.tight_layout()
-plt.savefig(os.path.join(here(), "outputs", "descriptive2.png"))
+plt.savefig(os.path.join(here(), "outputs", "descriptive3.png"))
 plt.show()
 
 # %%

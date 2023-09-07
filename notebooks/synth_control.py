@@ -82,7 +82,9 @@ ax = synth.plot_synth(
     filename="gas_synth_vs.png",
 )
 ax.set_xticks(list(data_gas["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]], rotation=45
+)
 plt.show()
 
 
@@ -93,7 +95,9 @@ ax = synth.plot_dif(
     filename="gas_synth_dif.png",
 )
 ax.set_xticks(list(data_gas["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]], rotation=45
+)
 plt.show()
 
 # %%
@@ -118,7 +122,9 @@ ax = placebo.plot_placebo_test(
     filename="gas_placebos.png",
 )
 ax.set_xticks(list(data_gas["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]], rotation=45
+)
 plt.show()
 
 # %%
@@ -129,19 +135,19 @@ plt.show()
 # keep only high and very high energy dependency units as controls
 # keep gas as treated unit
 data_fuel = data_filt[
-    (data_filt["energy_intensity_group"].isin(["High", "Very high"]))
-    | (data_filt["coicop_code"] == "01.1.5")
+    (data_filt["energy_intensity_group"].isin(["Low", "Very low"]))
+    | (data_filt["coicop_code"] == "07.2.2")
 ]
 
 
 # %%
 # params
-treated_unit = "OILS & FATS "
+treated_unit = "FUELS & LUBRICANTS "
 outcome = "cpi"
 time = "rank"
 df_id = "item_name"
 treatment_date = rank_treatment
-features = ["energy_intensity"]
+features = []
 
 # %%
 synth = (
@@ -166,20 +172,24 @@ print(synth_df)
 ax = synth.plot_synth(
     save=True,
     savepath=os.path.join(here(), "outputs"),
-    filename="cook_oil_synth_vs.png",
+    filename="fuel_synth_vs.png",
 )
 ax.set_xticks(list(data_fuel["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_fuel["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_fuel["date"].unique())[1::16]], rotation=45
+)
 plt.show()
 
 # %%
 ax = synth.plot_dif(
     save=True,
     savepath=os.path.join(here(), "outputs"),
-    filename="cook_oil_synth_dif.png",
+    filename="fuel_synth_dif.png",
 )
 ax.set_xticks(list(data_fuel["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_fuel["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_fuel["date"].unique())[1::16]], rotation=45
+)
 plt.show()
 
 # %%
@@ -201,9 +211,11 @@ ax = placebo.plot_placebo_test(
     filter_bad=True,
     save=True,
     savepath=os.path.join(here(), "outputs"),
-    filename="cook_oil_placebos.png",
+    filename="fuel_placebos.png",
 )
 ax.set_xticks(list(data_fuel["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_fuel["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_fuel["date"].unique())[1::16]], rotation=45
+)
 plt.show()
 # %%

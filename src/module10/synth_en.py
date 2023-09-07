@@ -1,4 +1,7 @@
-"""Class to do synthetic control using ElasticNet."""
+"""Class to do synthetic control using ElasticNet.
+
+TODO: finish docstrings.
+"""
 
 
 import numpy as np
@@ -467,6 +470,8 @@ class Placebo(SynthControlCV):
             + str(self._pool_size)
         )
         ax.grid(axis="y", color="lightgrey", linewidth=1)
+        plt.ylabel("Treated - synthetic control")
+        plt.xlabel("Time")
         sns.despine()
         if save is True:
             plt.savefig(os.path.join(savepath, filename))

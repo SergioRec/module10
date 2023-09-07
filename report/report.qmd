@@ -91,9 +91,19 @@ cpi_melted["coicop_code"] = cpi_melted["coicop_code"].astype("str")
 
 # merged data
 data = cpi_melted.merge(ei, on="coicop_code", how="inner").copy()
+data_filt = data[data["date"] >= 201001].copy()
 
-data.head(10)
+# convert date string to integer from 1 to max
+# needed as intervals between date strings might not be the same
+data_filt["rank"] = data_filt["date"].rank(method="dense")
+
+# rank number for invasion date
+rank_treatment = data_filt[data_filt["date"] == 202202]["rank"].unique()[0]
+
+data_filt.head(10)
 ```
+
+For this analysis, we limited the time series to start from 2010 onwards.
 
 @fig-1 shows clearly that energy prices increased drastically after the
 invasion started. This increase overshadows any change in trends in any of the
@@ -106,16 +116,9 @@ sns.set_palette(sns.color_palette(ons_cat))
 
 # plot coicop categories from 2015 onwards to see trends
 
-data_plot = data[(data["date"] >= 201501)].copy()
-
-# convert date string to integer from 1 to max
-# needed as intervals between date strings might not be the same
-data_plot["rank"] = data_plot["date"].rank(method="dense")
-rank_treatment = data_plot[data_plot["date"] == 202202]["rank"].unique()[0]
-
 fig, ax = plt.subplots(figsize=(9, 5))
 sns.lineplot(
-    data=data_plot,
+    data=data_filt,
     x="rank",
     y="cpi",
     hue="energy_intensity_group",
@@ -129,12 +132,13 @@ plt.vlines(
     linestyles=":",
     colors="black",
 )
-ax.set_xticks(list(data_plot["rank"].unique())[1::16])
+ax.set_xticks(list(data_filt["rank"].unique())[1::16])
 ax.set_xticklabels(
-    [str(d) for d in list(data_plot["date"].unique())[1::16]],
+    [str(d) for d in list(data_filt["date"].unique())[1::16]],
     rotation=45
 )
-
+ax.set_xlabel("Time")
+ax.set_ylabel("Average CPI")
 ax.grid(axis="y", color="lightgrey", linewidth=1)
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.show()
@@ -151,7 +155,7 @@ difficult to be sure because trends were not parallel before.
 # same but without energy
 fig, ax = plt.subplots(figsize=(9, 5))
 sns.lineplot(
-    data=data_plot[data_plot["energy_intensity_group"] != "Energy"],
+    data=data_filt[data_filt["energy_intensity_group"] != "Energy"],
     x="rank",
     y="cpi",
     hue="energy_intensity_group",
@@ -165,11 +169,13 @@ plt.vlines(
     linestyles=":",
     colors="black",
 )
-ax.set_xticks(list(data_plot["rank"].unique())[1::16])
+ax.set_xticks(list(data_filt["rank"].unique())[1::16])
 ax.set_xticklabels(
-    [str(d) for d in list(data_plot["date"].unique())[1::16]],
+    [str(d) for d in list(data_filt["date"].unique())[1::16]],
     rotation=45
 )
+ax.set_xlabel("Time")
+ax.set_ylabel("Average CPI")
 ax.grid(axis="y", color="lightgrey", linewidth=1)
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.show()
@@ -190,16 +196,6 @@ period. For this, we use ElasticNet regression with cross-validation.
 Our hypothesis is that the Russian invasion of Ukraine had an impact mainly
 on gas prices, as the UK relied heavily on Russian imports of gas.
 ```{python}
-# filter data as we don't need long time series
-data_filt = data[data["date"] >= 201001].copy()
-
-# reduce granularity of data to prevent overfitting
-# data_filt = data_filt[data["date"].astype("str").str[-2:].isin(["02", "08"])]
-
-# rank dates to prevent uneven intervals due to date string
-data_filt["rank"] = data_filt["date"].rank(method="dense")
-rank_treatment = data_filt[data_filt["date"] == 202202]["rank"].unique()[0]
-
 # keep only low and very low energy dependency units as controls
 # keep gas as treated unit
 data_gas = data_filt[
@@ -285,12 +281,7 @@ placebo = Placebo(
 )
 placebos = placebo.placebo_test()
 
-ax = placebo.plot_placebo_test(
-    filter_bad=True,
-    save=True,
-    savepath=os.path.join(here(), "outputs"),
-    filename="placebos.png",
-)
+ax = placebo.plot_placebo_test(filter_bad=True)
 ax.set_xticks(list(data_gas["rank"].unique())[1::16])
 ax.set_xticklabels(
     [str(d) for d in list(data_gas["date"].unique())[1::16]],
@@ -307,16 +298,6 @@ In this case, imports do not come mainly from Russia, so we do not expect inflat
 in this product to be caused mainly by the invasion.
 
 ```{python}
-# filter data as we don't need long time series
-data_filt = data[data["date"] >= 201001].copy()
-
-# reduce granularity of data to prevent overfitting
-# data_filt = data_filt[data["date"].astype("str").str[-2:].isin(["02", "08"])]
-
-# rank dates to prevent uneven intervals due to date string
-data_filt["rank"] = data_filt["date"].rank(method="dense")
-rank_treatment = data_filt[data_filt["date"] == 202202]["rank"].unique()[0]
-
 # keep only low and very low energy dependency units as controls
 # keep gas as treated unit
 data_fuel = data_filt[
@@ -400,12 +381,7 @@ placebo = Placebo(
 )
 placebos = placebo.placebo_test()
 
-ax = placebo.plot_placebo_test(
-    filter_bad=True,
-    save=True,
-    savepath=os.path.join(here(), "outputs"),
-    filename="placebos.png",
-)
+ax = placebo.plot_placebo_test(filter_bad=True)
 ax.set_xticks(list(data_gas["rank"].unique())[1::16])
 ax.set_xticklabels(
     [str(d) for d in list(data_gas["date"].unique())[1::16]],
@@ -418,7 +394,7 @@ plt.show()
 ### Conclusions
 
 This analysis highlights how a strong reliance on hostile or unstable nations
-for critical goods can be dangerous. This can be mitigated by diversifying
+for critical goods such as gas can be dangerous. This can be mitigated by diversifying
 sources, increasing storage and investing in local prospecting and exploitation
 of natural resources where possible.
 
