@@ -123,12 +123,12 @@ plt.show()
 
 # %%
 ########################
-#     OILS & FATS      #
+#  FUELS & LUBRICANTS  #
 ########################
 # %%
 # keep only high and very high energy dependency units as controls
 # keep gas as treated unit
-data_cook = data_filt[
+data_fuel = data_filt[
     (data_filt["energy_intensity_group"].isin(["High", "Very high"]))
     | (data_filt["coicop_code"] == "01.1.5")
 ]
@@ -146,7 +146,7 @@ features = ["energy_intensity"]
 # %%
 synth = (
     SynthControlCV(
-        data_cook,
+        data_fuel,
         unit=treated_unit,
         outcome=outcome,
         time=time,
@@ -168,8 +168,8 @@ ax = synth.plot_synth(
     savepath=os.path.join(here(), "outputs"),
     filename="cook_oil_synth_vs.png",
 )
-ax.set_xticks(list(data_cook["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_cook["date"].unique())[1::16]])
+ax.set_xticks(list(data_fuel["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_fuel["date"].unique())[1::16]])
 plt.show()
 
 # %%
@@ -178,14 +178,14 @@ ax = synth.plot_dif(
     savepath=os.path.join(here(), "outputs"),
     filename="cook_oil_synth_dif.png",
 )
-ax.set_xticks(list(data_cook["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_cook["date"].unique())[1::16]])
+ax.set_xticks(list(data_fuel["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_fuel["date"].unique())[1::16]])
 plt.show()
 
 # %%
 # placebo tests
 placebo = Placebo(
-    data_cook,
+    data_fuel,
     treated_unit=treated_unit,
     outcome=outcome,
     time=time,
@@ -203,7 +203,7 @@ ax = placebo.plot_placebo_test(
     savepath=os.path.join(here(), "outputs"),
     filename="cook_oil_placebos.png",
 )
-ax.set_xticks(list(data_cook["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_cook["date"].unique())[1::16]])
+ax.set_xticks(list(data_fuel["rank"].unique())[1::16])
+ax.set_xticklabels([str(d) for d in list(data_fuel["date"].unique())[1::16]])
 plt.show()
 # %%

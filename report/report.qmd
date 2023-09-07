@@ -11,15 +11,20 @@ format:
 In this project we're going to test the hypothesis that the Russian invasion
 of Ukraine, started end of February 2022, had a significant impact in energy
 prices. This increase in energy prices would be driven by disruptions to
-the imports of Russian gas and oil due to sanctions and other factors. Energy
-prices had a knock-on effect on industries considered high energy intensive,
+the imports of Russian gas due to sanctions and other factors. An increase
+in gas prices affected home consumption and electricity generation, and had a
+knock-on effect on industries considered high energy intensive,
 but less so in industries with less dependency on energy prices.
 
 To assess this hipothesis, we are going to use a technique called synthetic
-control, first developed by [Abadie et al.](https://www.jstor.org/stable/29747059)
-in 2010. It consists on creating a synthetic control group to use as comparison,
-based on a weighted average of a number of placebo units. The weights are
-estimated using regression.
+control, first developed by [Abadie and Gardeazabal in 2003](https://www.aeaweb.org/articles?id=10.1257/000282803321455188).
+It consists on creating a synthetic control group to use as comparison,
+based on a weighted average of a number of placebo units.
+This synthetic control works as a counterfactual for the intervention.
+That is, it is a prediction of what would have happened if no intervention ocurred,
+based on the trend of the treated group prior to the intervention.
+The weights are estimated using regression to find the best fit for the
+pre-intervention trend.
 
 ```{python}
 # imports
@@ -37,6 +42,8 @@ from module10.synth_en import Placebo, SynthControlCV
 # ignore future warnings
 warnings.simplefilter(action="ignore", category=FutureWarning)
 ```
+
+### EDA
 
 We analysed [CPI time series](https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceinflation)
 together with the [energy intensity estimate](https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/contributionstotheconsumerpricesindexcpibyenergyintensity)
@@ -106,7 +113,7 @@ data_plot = data[(data["date"] >= 201501)].copy()
 data_plot["rank"] = data_plot["date"].rank(method="dense")
 rank_treatment = data_plot[data_plot["date"] == 202202]["rank"].unique()[0]
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(9, 5))
 sns.lineplot(
     data=data_plot,
     x="rank",
@@ -123,14 +130,18 @@ plt.vlines(
     colors="black",
 )
 ax.set_xticks(list(data_plot["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_plot["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_plot["date"].unique())[1::16]],
+    rotation=45
+)
+
 ax.grid(axis="y", color="lightgrey", linewidth=1)
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.show()
 ```
 
 @fig-2 shows the same information as above, but without the energy category
-to better appreciate the trends. It seems that industry groups with high and
+to better appreciate the trends. It seems that CPI for industry groups with high and
 very high energy intensity grow faster after the war started. However, it is
 difficult to be sure because trends were not parallel before.
 ```{python}
@@ -138,7 +149,7 @@ difficult to be sure because trends were not parallel before.
 #| fig-cap: "Trend in CPI by energy intensity group, excluding energy"
 
 # same but without energy
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(9, 5))
 sns.lineplot(
     data=data_plot[data_plot["energy_intensity_group"] != "Energy"],
     x="rank",
@@ -155,17 +166,29 @@ plt.vlines(
     colors="black",
 )
 ax.set_xticks(list(data_plot["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_plot["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_plot["date"].unique())[1::16]],
+    rotation=45
+)
 ax.grid(axis="y", color="lightgrey", linewidth=1)
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.show()
 ```
 
-However, simple visual inspection is not enough to establish a causal relationship
+### Synthetic control
+
+Simple visual inspection is not enough to establish a causal relationship
 between the invasion and the increase in prices. We calculated a synthetic
 control using the industries classified as low and very low energy intensity,
 as these would have been less affected by an increase in energy prices.
 
+To calculate the synthetic control, we need to estimate the combination of
+weights for the control units that give the best fit for the pre-treatment
+period. For this, we use ElasticNet regression with cross-validation.
+
+#### Gas CPI
+Our hypothesis is that the Russian invasion of Ukraine had an impact mainly
+on gas prices, as the UK relied heavily on Russian imports of gas.
 ```{python}
 # filter data as we don't need long time series
 data_filt = data[data["date"] >= 201001].copy()
@@ -218,7 +241,10 @@ is not visible in the synthetic control.
 #| fig-cap: "Gas CPI vs synthetic control"
 ax = synth.plot_synth()
 ax.set_xticks(list(data_gas["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]],
+    rotation=45
+)
 plt.show()
 ```
 
@@ -230,18 +256,23 @@ increased double of what was expected.
 #| fig-cap: "Difference between synthetic control and target unit"
 ax = synth.plot_dif()
 ax.set_xticks(list(data_gas["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]],
+    rotation=45
+)
 plt.show()
 ```
 
 To estimate if this effect is significant, a synthetic control is calculated
-for each placebo unit. If the ATT on the treated unit is more extreme than the
-placebo effects, we can consider it significant. @fig-5 shows that the effect
-is significant, as it's more extreme than >95% of the placebo effects.
+for each placebo unit. Placebo units with very bad pre-treatment fit are
+removed from the analysis. If the ATT on the treated unit is more extreme than
+the placebo effects, we can consider it significant. @fig-5 shows that the
+effect is significant, as it's more extreme than >95% of the placebo effects.
 ```{python}
 #| label: fig-5
 #| fig-cap: "Placebo tests"
 # placebo tests
+
 placebo = Placebo(
     data_gas,
     treated_unit=treated_unit,
@@ -254,7 +285,6 @@ placebo = Placebo(
 )
 placebos = placebo.placebo_test()
 
-# %%
 ax = placebo.plot_placebo_test(
     filter_bad=True,
     save=True,
@@ -262,6 +292,138 @@ ax = placebo.plot_placebo_test(
     filename="placebos.png",
 )
 ax.set_xticks(list(data_gas["rank"].unique())[1::16])
-ax.set_xticklabels([str(d) for d in list(data_gas["date"].unique())[1::16]])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]],
+    rotation=45
+)
+plt.show()
+
+```
+
+### Fuels & lubricants CPI
+For comparison, we are replicating the analysis with a different energy category,
+fuels and lubricants. These include petrol and other kind of fuels for transportation.
+In this case, imports do not come mainly from Russia, so we do not expect inflation
+in this product to be caused mainly by the invasion.
+
+```{python}
+# filter data as we don't need long time series
+data_filt = data[data["date"] >= 201001].copy()
+
+# reduce granularity of data to prevent overfitting
+# data_filt = data_filt[data["date"].astype("str").str[-2:].isin(["02", "08"])]
+
+# rank dates to prevent uneven intervals due to date string
+data_filt["rank"] = data_filt["date"].rank(method="dense")
+rank_treatment = data_filt[data_filt["date"] == 202202]["rank"].unique()[0]
+
+# keep only low and very low energy dependency units as controls
+# keep gas as treated unit
+data_fuel = data_filt[
+    (data_filt["energy_intensity_group"].isin(["Low", "Very low"]))
+    | (data_filt["coicop_code"] == "07.2.2")
+]
+
+# params
+treated_unit = "FUELS & LUBRICANTS "
+outcome = "cpi"
+time = "rank"
+df_id = "item_name"
+treatment_date = rank_treatment
+features = []
+
+synth = (
+    SynthControlCV(
+        data_fuel,
+        unit=treated_unit,
+        outcome=outcome,
+        time=time,
+        df_id=df_id,
+        scale=True,
+        treatment_date=treatment_date,
+        features=features,
+    )
+    .prepare_data()
+    .reg()
+)
+
+synth_df = synth.create_synth()
+```
+
+@fig-6 shows the performance of the synthetic control and the fuel & lubricants CPI.
+It shows a steady increase from around the start of 2021. The synthetic control
+follows this increase quite closely after the invasion of Ukraine.
+```{python}
+#| label: fig-6
+#| fig-cap: "Gas CPI vs synthetic control"
+ax = synth.plot_synth()
+ax.set_xticks(list(data_gas["rank"].unique())[1::16])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]],
+    rotation=45
+)
 plt.show()
 ```
+
+@fig-7 shows the difference between synthetic control and target unit. The
+average treatment effect on the treated (ATT) is around 0, which suggest that
+the inflation was as expected based on pre-invasion trends.
+
+```{python}
+#| label: fig-7
+#| fig-cap: "Difference between synthetic control and target unit"
+ax = synth.plot_dif()
+ax.set_xticks(list(data_gas["rank"].unique())[1::16])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]],
+    rotation=45
+)
+plt.show()
+```
+
+As expected, placebo tests show that the effect of the invasion in the
+fuel & lubricants category CPI is not significant.
+```{python}
+#| label: fig-8
+#| fig-cap: "Placebo tests"
+# placebo tests
+
+placebo = Placebo(
+    data_fuel,
+    treated_unit=treated_unit,
+    outcome=outcome,
+    time=time,
+    df_id=df_id,
+    scale=True,
+    treatment_date=treatment_date,
+    features=features,
+)
+placebos = placebo.placebo_test()
+
+ax = placebo.plot_placebo_test(
+    filter_bad=True,
+    save=True,
+    savepath=os.path.join(here(), "outputs"),
+    filename="placebos.png",
+)
+ax.set_xticks(list(data_gas["rank"].unique())[1::16])
+ax.set_xticklabels(
+    [str(d) for d in list(data_gas["date"].unique())[1::16]],
+    rotation=45
+)
+plt.show()
+
+```
+
+### Conclusions
+
+This analysis highlights how a strong reliance on hostile or unstable nations
+for critical goods can be dangerous. This can be mitigated by diversifying
+sources, increasing storage and investing in local prospecting and exploitation
+of natural resources where possible.
+
+### References
+
+1. Abadie, A., Gardeazabal, J. (2003). The Economic Costs of Conflict: A Case Study of the Basque Country. _The American Economic Review, 93_, 1, pp. 113-132. DOI: <https://doi.org/10.1257/000282803321455188> {#ref1}
+2. Office for National Statistics (2023). Consumer price inflation tables. Available at: <https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceinflation>
+3. Office for National Statistics (2023). Contributions to the Consumer Prices Index (CPI) by energy intensity. Available at: <https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/contributionstotheconsumerpricesindexcpibyenergyintensity>
